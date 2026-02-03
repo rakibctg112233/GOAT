@@ -1,13 +1,12 @@
 const axios = require('axios');
 const baseApiUrl = async () => {
-    return "https://noobs-api.top/dipto";
+    return "https://api.noobs-api.rf.gd/dipto";
 };
 
 module.exports.config = {
     name: "bby",
     aliases: ["baby", "bbe", "babe", "sam"],
     version: "6.9.0",
-   
     author: "dipto",
     countDown: 0,
     role: 0,
@@ -66,7 +65,7 @@ module.exports.onStart = async ({
                 return api.sendMessage(`Total Teach = ${data.length}\n👑 | List of Teachers of baby\n${output}`, event.threadID, event.messageID);
             } else {
                 const d = (await axios.get(`${link}?list=all`)).data;
-                return api.sendMessage(`❇ | Total Teach = ${d.length || "api off"}\n♻ | Total Response = ${d.responseLength || "api off"}`, event.threadID, event.messageID);
+                return api.sendMessage(`❇️ | Total Teach = ${d.length || "api off"}\n♻️ | Total Response = ${d.responseLength || "api off"}`, event.threadID, event.messageID);
             }
         }
 
@@ -102,4 +101,4 @@ module.exports.onStart = async ({
         }
 
         if (args[0] === 'teach' && args[1] === 'react') {
-           
+       
