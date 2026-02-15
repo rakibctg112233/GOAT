@@ -34,7 +34,7 @@ module.exports = {
     const totalCommands = global.GoatBot?.commands?.size || 0;
 
     const images = [
-      "https://files.catbox.moe/7q00aa.gif"
+      "https://files.catbox.moe/t2lti9.mp4"
     ];
     const image = images[Math.floor(Math.random() * images.length)];
 
