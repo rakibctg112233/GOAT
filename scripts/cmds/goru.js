@@ -5,7 +5,7 @@ const { createCanvas, loadImage } = require("canvas");
 
 module.exports = {
   config: {
-    name: "goru",
+    name: "goru2",
     version: "2.6.1",
     author: "Milon Pro",
     countDown: 5,
