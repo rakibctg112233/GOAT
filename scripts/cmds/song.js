@@ -1,93 +1,77 @@
-const fs = require("fs-extra");
-const path = require("path");
-const axios = require("axios");
+const a = require("axios");
+const b = require("fs");
+const c = require("path");
+const d = require("yt-search");
+
+const nix = "https://raw.githubusercontent.com/aryannix/stuffs/master/raw/apis.json";
 
 module.exports = {
-config: {
-name: "song",
-version: "2.3.0",
-author: "Milon",
-countDown: 5,
-role: 0,
-description: "Search and download songs without prefix",
-category: "media",
-usePrefix: false // এটিও রাখা হলো যেন হেল্প লিস্টে সমস্যা না হয়
-},
+  config: {
+    name: "song",
+    aliases: ["music", "song"],
+    version: "0.0.1",
+    author: "ArYAN",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Sing tomake chai",
+    longDescription: "Search and download music from YouTube",
+    category: "MUSIC",
+    guide: "/music <song name or YouTube URL>"
+  },
 
-onChat: async function ({ api, event, message, args }) {
-// মেসেজ যদি 'song' দিয়ে শুরু হয়
-if (event.body && event.body.toLowerCase().startsWith("song")) {
-const input = event.body.split(/\s+/); // মেসেজটিকে স্পেস দিয়ে ভাগ করা
-input.shift(); // 'song' শব্দটিকে বাদ দেওয়া
-const query = input.join(" "); // বাকিটা হলো গানের নাম
+  onStart: async function ({ api: e, event: f, args: g }) {
+    if (!g.length) return e.sendMessage("❌ Provide a song name or YouTube URL.", f.threadID, f.messageID);
 
-if (!query) {
-return message.reply("❌ Please provide a song name.\n📌 Example: song Let Me Love You");
-}
+    let baseApi;
+    const i = await e.sendMessage("🎵 Please wait...", f.threadID, null, f.messageID);
+    
+    try {
+      const configRes = await a.get(nix);
+      baseApi = configRes.data && configRes.data.api;
+      if (!baseApi) throw new Error("Configuration Error: Missing API in GitHub JSON.");
+    } catch (error) {
+      e.unsendMessage(i.messageID);
+      return e.sendMessage("❌ Failed to fetch API configuration from GitHub.", f.threadID, f.messageID);
+    }
 
-const searchingMessage = await message.reply(`🔍 Searching for "${query}"...\n⏳ Please wait...`);
+    let h = g.join(" ");
 
-try {
-// Search API
-const searchResponse = await axios.get(
-`https://betadash-search-download.vercel.app/yt?search=${encodeURIComponent(query)}`
-);
-const songData = searchResponse.data[0];
+    try {
+      let j;
+      if (h.startsWith("http")) {
+        j = h;
+      } else {
+        const k = await d(h);
+        if (!k || !k.videos.length) throw new Error("No results found.");
+        j = k.videos[0].url;
+      }
 
-if (!songData || !songData.url) {
-return message.reply("⚠️ No results found. Try another song.");
-}
+      const l = `${baseApi}/play?url=${encodeURIComponent(j)}`;
+      const m = await a.get(l);
+      const n = m.data;
 
-const ytUrl = songData.url;
-const title = songData.title;
-const channelName = songData.channelName || "Unknown";
+      if (!n.status || !n.downloadUrl) throw new Error("API failed to return download URL.");
 
-await api.editMessage(`🎶 Found: ${title}\n⬇️ Downloading...`, searchingMessage.messageID);
+      const o = `${n.title}.mp3`.replace(/[\\/:"*?<>|]/g, "");
+      const p = c.join(__dirname, o);
 
-// Download API
-const downloadResponse = await axios.get(
-`https://yt-mp3-imran.vercel.app/api?url=${encodeURIComponent(ytUrl)}`
-);
+      const q = await a.get(n.downloadUrl, { responseType: "arraybuffer" });
+      b.writeFileSync(p, q.data);
 
-const audioUrl = downloadResponse.data.downloadUrl;
-if (!audioUrl) {
-return message.reply("⚠️ Failed to fetch download link.");
-}
+      await e.sendMessage(
+        { attachment: b.createReadStream(p), body: `🎵 𝗠𝗨𝗦𝗜𝗖\n━━━━━━━━━━━━━━━\n\n${n.title}` },
+        f.threadID,
+        () => {
+          b.unlinkSync(p);
+          e.unsendMessage(i.messageID);
+        },
+        f.messageID
+      );
 
-const cachePath = path.join(__dirname, "cache");
-if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath, { recursive: true });
-
-const filePath = path.join(cachePath, `song_${Date.now()}.mp3`);
-
-const response = await axios({
-method: "get",
-url: audioUrl,
-responseType: "stream",
-});
-
-const writer = fs.createWriteStream(filePath);
-response.data.pipe(writer);
-
-writer.on("finish", async () => {
-await message.reply({
-body: `✅ Download Complete!\n🎧 Title: ${title}\n🎤 Channel: ${channelName}`,
-attachment: fs.createReadStream(filePath),
-});
-fs.unlinkSync(filePath);
-});
-
-writer.on("error", (err) => {
-console.error(err);
-message.reply("❌ Error downloading song.");
-});
-
-} catch (err) {
-console.error("❌ Error:", err);
-message.reply("⚠️ Unexpected error occurred.");
-}
-}
-},
-
-// onStart খালি রাখা হলো যেন মেনু বা হেল্প কমান্ডে কোনো সমস্যা না হয়
-onStart: async function () {}
+    } catch (r) {
+      console.error(r);
+      e.sendMessage(`❌ Failed to download song: ${r.message}`, f.threadID, f.messageID);
+      e.unsendMessage(i.messageID);
+    }
+  }
 };
