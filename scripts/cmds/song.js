@@ -1,119 +1,93 @@
-const a = require("axios");
-const b = require("fs");
-const c = require("path");
-const d = require("yt-search");
-
-const nix = "https://raw.githubusercontent.com/aryannix/stuffs/master/raw/apis.json";
-
-async function getStream(url) {
-  const res = await a({ url, responseType: "stream" });
-  return res.data;
-}
-
-async function downloadSong(baseApi, url, api, event, title = null) {
-  try {
-    const apiUrl = `${baseApi}/play?url=${encodeURIComponent(url)}`;
-    const res = await a.get(apiUrl);
-    const data = res.data;
-
-    if (!data.status || !data.downloadUrl) throw new Error("API failed to return download URL.");
-
-    const songTitle = title || data.title;
-    const fileName = `${songTitle}.mp3`.replace(/[\\/:"*?<>|]/g, "");
-    const filePath = c.join(__dirname, fileName);
-
-    const songData = await a.get(data.downloadUrl, { responseType: "arraybuffer" });
-    b.writeFileSync(filePath, songData.data);
-
-    await api.sendMessage(
-      { body: `• ${songTitle}`, attachment: b.createReadStream(filePath) },
-      event.threadID,
-      () => b.unlinkSync(filePath),
-      event.messageID
-    );
-  } catch (err) {
-    console.error(err);
-    api.sendMessage(`❌ Failed to download song: ${err.message}`, event.threadID, event.messageID);
-  }
-}
+const fs = require("fs-extra");
+const path = require("path");
+const axios = require("axios");
 
 module.exports = {
-  config: {
-    name: "song",
-    aliases: ["music", "sing"],
-    version: "0.0.1",
-    author: "ArYAN",
-    countDown: 5,
-    role: 0,
-    shortDescription: "Sing tomake chai",
-    longDescription: "Search and download music from YouTube",
-    category: "MUSIC",
-    guide: "/play <song name or YouTube URL>"
-  },
+config: {
+name: "song",
+version: "2.3.0",
+author: "Milon",
+countDown: 5,
+role: 0,
+description: "Search and download songs without prefix",
+category: "media",
+usePrefix: false // এটিও রাখা হলো যেন হেল্প লিস্টে সমস্যা না হয়
+},
 
-  onStart: async function ({ api: e, event: f, args: g, commandName: cmd }) {
-    let baseApi;
-    try {
-      const configRes = await a.get(nix);
-      baseApi = configRes.data && configRes.data.api;
-      if (!baseApi) throw new Error("Configuration Error: Missing API in GitHub JSON.");
-    } catch (error) {
-      return e.sendMessage("❌ Failed to fetch API configuration from GitHub.", f.threadID, f.messageID);
-    }
-    
-    if (!g.length) return e.sendMessage("❌ Provide a song name or YouTube URL.", f.threadID, f.messageID);
+onChat: async function ({ api, event, message, args }) {
+// মেসেজ যদি 'song' দিয়ে শুরু হয়
+if (event.body && event.body.toLowerCase().startsWith("song")) {
+const input = event.body.split(/\s+/); // মেসেজটিকে স্পেস দিয়ে ভাগ করা
+input.shift(); // 'song' শব্দটিকে বাদ দেওয়া
+const query = input.join(" "); // বাকিটা হলো গানের নাম
 
-    const aryan = g;
-    const query = aryan.join(" ");
-    if (query.startsWith("http")) return downloadSong(baseApi, query, e, f);
+if (!query) {
+return message.reply("❌ Please provide a song name.\n📌 Example: song Let Me Love You");
+}
 
-    try {
-      const res = await d(query);
-      const results = res.videos.slice(0, 6);
-      if (!results.length) return e.sendMessage("❌ No results found.", f.threadID, f.messageID);
+const searchingMessage = await message.reply(`🔍 Searching for "${query}"...\n⏳ Please wait...`);
 
-      let msg = "";
-      results.forEach((v, i) => {
-        msg += `${i + 1}. ${v.title}\n⏱ ${v.timestamp} | 👀 ${v.views}\n\n`;
-      });
+try {
+// Search API
+const searchResponse = await axios.get(
+`https://betadash-search-download.vercel.app/yt?search=${encodeURIComponent(query)}`
+);
+const songData = searchResponse.data[0];
 
-      const thumbs = await Promise.all(results.map(v => getStream(v.thumbnail)));
+if (!songData || !songData.url) {
+return message.reply("⚠️ No results found. Try another song.");
+}
 
-      e.sendMessage(
-        { body: msg + "Reply with number (1-6) to download song", attachment: thumbs },
-        f.threadID,
-        (err, info) => {
-          if (err) return console.error(err);
-          global.GoatBot.onReply.set(info.messageID, {
-            results,
-            messageID: info.messageID,
-            author: f.senderID,
-            commandName: cmd,
-            baseApi
-          });
-        },
-        f.messageID
-      );
-    } catch (err) {
-      console.error(err);
-      e.sendMessage("❌ Failed to search YouTube.", f.threadID, f.messageID);
-    }
-  },
+const ytUrl = songData.url;
+const title = songData.title;
+const channelName = songData.channelName || "Unknown";
 
-  onReply: async function ({ api: e, event: f, Reply: g }) {
-    const results = g.results;
-    const baseApi = g.baseApi;
-    if (!baseApi) return e.sendMessage("❌ Session expired. Please restart the command.", f.threadID, f.messageID);
+await api.editMessage(`🎶 Found: ${title}\n⬇️ Downloading...`, searchingMessage.messageID);
 
-    const choice = parseInt(f.body);
+// Download API
+const downloadResponse = await axios.get(
+`https://yt-mp3-imran.vercel.app/api?url=${encodeURIComponent(ytUrl)}`
+);
 
-    if (isNaN(choice) || choice < 1 || choice > results.length) {
-      return e.sendMessage("❌ Invalid selection.", f.threadID, f.messageID);
-    }
+const audioUrl = downloadResponse.data.downloadUrl;
+if (!audioUrl) {
+return message.reply("⚠️ Failed to fetch download link.");
+}
 
-    const selected = results[choice - 1];
-    await e.unsendMessage(g.messageID);
+const cachePath = path.join(__dirname, "cache");
+if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath, { recursive: true });
 
-    downloadSong(baseApi, selected.url, e, f, selected.title);
-  }
+const filePath = path.join(cachePath, `song_${Date.now()}.mp3`);
+
+const response = await axios({
+method: "get",
+url: audioUrl,
+responseType: "stream",
+});
+
+const writer = fs.createWriteStream(filePath);
+response.data.pipe(writer);
+
+writer.on("finish", async () => {
+await message.reply({
+body: `✅ Download Complete!\n🎧 Title: ${title}\n🎤 Channel: ${channelName}`,
+attachment: fs.createReadStream(filePath),
+});
+fs.unlinkSync(filePath);
+});
+
+writer.on("error", (err) => {
+console.error(err);
+message.reply("❌ Error downloading song.");
+});
+
+} catch (err) {
+console.error("❌ Error:", err);
+message.reply("⚠️ Unexpected error occurred.");
+}
+}
+},
+
+// onStart খালি রাখা হলো যেন মেনু বা হেল্প কমান্ডে কোনো সমস্যা না হয়
+onStart: async function () {}
 };
