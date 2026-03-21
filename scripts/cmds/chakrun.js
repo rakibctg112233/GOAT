@@ -1,16 +1,16 @@
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
-const { createCanvas, loadImage, registerFont } = require("canvas");
+const { createCanvas, loadImage } = require("canvas");
 
 module.exports = {
   config: {
     name: "chakrun",
-    aliases: ["ckr"],
-    version: "3.0.0",
+    aliases: ["ckr", "chakrun"],
+    version: "9.0.0",
     author: "Milon Hasan",
     countDown: 5,
-    role: 2,
+    role: 0,
     category: "system",
     usePrefix: false 
   },
@@ -31,102 +31,100 @@ module.exports = {
   },
 
   onStart: async function ({ api, event, message }) {
-    const { threadID, messageID } = event;
-    const imgURL = "https://i.imgur.com/44JcQoK.jpeg"; // তোমার দেওয়া ইমেজ লিংক
+    const { threadID } = event;
+    const imgURL = "https://i.imgur.com/AakQ8H9.jpeg"; 
     const cacheDir = path.join(__dirname, "cache");
-    const imgPath = path.join(cacheDir, `sysinfo_${threadID}.png`);
+    const imgPath = path.join(cacheDir, `sysinfo_${Date.now()}.png`);
 
-    // ক্যাশে ফোল্ডার না থাকলে তৈরি করবে
     if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
     const wait = await message.reply("⏳ Generating system info image, please wait...");
 
     try {
-      let hostPlatform = "Unknown Host";
+      let hostPlatform = "Unknown";
       const platform = os.platform();
       const uptime = process.uptime();
       
-      // --- [ 🌐 তোমার দেওয়া হোস্টিং ডিটেকশন লজিক ] ---
-      const isRender = process.env.RENDER || 
-                       process.env.RENDER_EXTERNAL_URL || 
-                       (process.env.HOME && process.env.HOME.includes("/opt/render"));
+      const isRender = process.env.RENDER || (process.env.HOME && process.env.HOME.includes("/opt/render"));
+      const isRailway = process.env.RAILWAY_ID || process.env.RAILWAY_ENVIRONMENT;
 
-      const isRailway = process.env.RAILWAY_STATIC_URL || 
-                        process.env.RAILWAY_ID || 
-                        process.env.RAILWAY_ENVIRONMENT;
+      if (isRender) hostPlatform = "Render Cloud";
+      else if (isRailway) hostPlatform = "Railway Cloud";
+      else if (platform === "linux") hostPlatform = "Linux VPS";
+      else if (platform === "win32") hostPlatform = "Windows";
+      else if (platform === "android") hostPlatform = "Termux";
 
-      if (isRender) {
-        hostPlatform = "Render (Cloud Platform)";
-      } else if (isRailway) {
-        hostPlatform = "Railway (Cloud Platform)";
-      } else if (process.env.HEROKU_APP_ID) {
-        hostPlatform = "Heroku (Cloud)";
-      } else if (platform === "linux") {
-        hostPlatform = "VPS / Dedicated Server (Linux)";
-      } else if (platform === "win32") {
-        hostPlatform = "Localhost (Windows PC)";
-      } else if (platform === "android") {
-        hostPlatform = "Termux (Android)";
-      }
-
-      // --- [ ⏳ আপটাইম: দিন, ঘণ্টা, মিনিট ] ---
-      const days = Math.floor(uptime / (3600 * 24));
-      const hours = Math.floor((uptime % (3600 * 24)) / 3600);
+      const days = Math.floor(uptime / 86400);
+      const hours = Math.floor((uptime % 86400) / 3600);
       const minutes = Math.floor((uptime % 3600) / 60);
 
-      // --- [ 🧠 মেমোরি ] ---
-      const memoryUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+      const totalMem = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
+      const usedMem = ((os.totalmem() - os.freemem()) / 1024 / 1024 / 1024).toFixed(2);
+      const ping = Date.now() - event.timestamp;
 
-      // --- [ 🎨 CANVAS DRAWING ] ---
+      // --- [ CANVAS DRAWING ] ---
       const baseImage = await loadImage(imgURL);
       const canvas = createCanvas(baseImage.width, baseImage.height);
       const ctx = canvas.getContext("2d");
 
-      // ব্যাকগ্রাউন্ড ইমেজ ড্র করা
       ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
 
-      // টেক্সট স্টাইল সেট করা
-      ctx.fillStyle = "#ffffff"; // সাদা রঙের লেখা
-      ctx.shadowColor = "rgba(0, 0, 0, 0.8)"; // লেখার পেছনে হালকা ছায়া
-      ctx.shadowBlur = 10;
+      // টেক্সট স্টাইল - Bold Font & High Visibility
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#000000"; 
+      ctx.lineWidth = 4; // বর্ডার আরও মোটা করা হয়েছে যাতে ফুটে ওঠে
       ctx.textBaseline = "top";
 
-      // শিরোনাম
-      ctx.font = "bold 50px Arial"; // বড় ফন্ট
-      ctx.fillText("SIZUKA BOT SYSTEM INFO", 50, 50);
+      const startX = canvas.width * 0.07; 
+      let currentY = canvas.height * 0.12; 
+      const lineSpacing = canvas.height * 0.095;
 
-      // ইনফরমেশন টেক্সট
-      ctx.font = "40px Arial"; // মাঝারি ফন্ট
-      const startY = 150;
-      const lineHeight = 70;
+      // Title
+      ctx.font = `bold ${Math.floor(canvas.height * 0.085)}px sans-serif`;
+      ctx.strokeText("SIZUKA BOT SYSTEM INFO", startX, currentY);
+      ctx.fillText("SIZUKA BOT SYSTEM INFO", startX, currentY);
+      
+      currentY += lineSpacing * 1.5;
 
-      ctx.fillText(`🌐 Host: ${hostPlatform}`, 50, startY);
-      ctx.fillText(`⚙️ OS: ${platform}`, 50, startY + lineHeight);
-      ctx.fillText(`⏳ Uptime: ${days}d ${hours}h ${minutes}m`, 50, startY + lineHeight * 2);
-      ctx.fillText(`🧠 Memory: ${memoryUsage} MB`, 50, startY + lineHeight * 3);
+      // Stats with Emojis & Bold Fonts
+      ctx.font = `bold ${Math.floor(canvas.height * 0.055)}px sans-serif`;
+      
+      const stats = [
+        `🌐 Host: ${hostPlatform}`,
+        `⚙️ OS: ${platform} (${os.arch()})`,
+        `⏳ Uptime: ${days}d ${hours}h ${minutes}m`,
+        `🧠 RAM: ${usedMem}GB / ${totalMem}GB`,
+        `📡 Ping: ${ping} ms`,
+        `🟢 Node: ${process.version}`
+      ];
 
-      // তোমার নাম (ক্রেডিট)
-      ctx.font = "italic 35px Arial";
-      ctx.fillStyle = "#cccccc"; // হালকা ধূসর রঙ
-      ctx.fillText("Power by:-Farhan Khan", 50, canvas.height - 80);
+      stats.forEach((text) => {
+        ctx.strokeText(text, startX, currentY);
+        ctx.fillText(text, startX, currentY);
+        currentY += lineSpacing; 
+      });
 
-      // ছবি সেভ করা
+      // Footer - Credits
+      ctx.font = `italic bold ${Math.floor(canvas.height * 0.045)}px sans-serif`;
+      ctx.fillStyle = "#00FF00"; 
+      ctx.strokeText("Power by:-Farhan Khan", startX, canvas.height - (lineSpacing * 1.1));
+      ctx.fillText("Power by:-Farhan Khan", startX, canvas.height - (lineSpacing * 1.1));
+
       const buffer = canvas.toBuffer("image/png");
       fs.writeFileSync(imgPath, buffer);
 
-      // ছবি পাঠানো
       api.unsendMessage(wait.messageID);
+      
       await message.reply({
         attachment: fs.createReadStream(imgPath)
       });
 
-      // পাঠানোর পর ক্যাশে ফাইল ডিলিট করা
       fs.unlinkSync(imgPath);
 
     } catch (err) {
       console.error(err);
-      api.unsendMessage(wait.messageID);
-      return message.reply(`❌ Error generating image: ${err.message}\nMake sure 'canvas' is installed.`);
+      if(wait) api.unsendMessage(wait.messageID);
+      return message.reply(`❌ Error: ${err.message}`);
     }
   }
 };
