@@ -27,7 +27,7 @@ const voiceMap = {
 "Magi": "https://files.catbox.moe/ecgpak.mp4",
 "মাগি": "https://files.catbox.moe/ecgpak.mp4",
 "খানকি": "https://files.catbox.moe/ecgpak.mp4",
-"khanki" "https://files.catbox.moe/ecgpak.mp4",
+"khanki": "https://files.catbox.moe/ecgpak.mp4",
 "Khanki": "https://files.catbox.moe/ecgpak.mp4",
 "FARHAN": "https://files.catbox.moe/tvpfee.mp3",
 "farhan": "https://files.catbox.moe/tvpfee.mp3",
