@@ -1,6 +1,7 @@
 const axios = require("axios");
 
 const mahmud = [
+        "বট",
         "Sizu",
         "sizu",
         "baby",
