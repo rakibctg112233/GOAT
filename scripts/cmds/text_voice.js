@@ -6,7 +6,7 @@ module.exports = {
 config: {
 name: "text_voice",
 version: "1.0.5",
-author: "Milon",
+author: "Farhan-Khan",
 countDown: 1, // সময় কমিয়ে ১ সেকেন্ড করা হলো
 role: 0,
 shortDescription: "Ultra Fast Voice Reply",
@@ -34,9 +34,15 @@ const voiceMap = {
 "Farhan": "https://files.catbox.moe/tvpfee.mp3",
 "ফারহান": "https://files.catbox.moe/tvpfee.mp3",
 "sizuka": "https://files.catbox.moe/3u6shs.mp3",
-"Sijuka": "https://files.catbox.moe/3u6shs.mp3",
-"Sizu": "https://files.catbox.moe/3u6shs.mp3",
+"Sizuka": "https://files.catbox.moe/3u6shs.mp3",
+"sizu": "https://files.catbox.moe/3u6shs.mp3",
 "সিজুকা": "https://files.catbox.moe/3u6shs.mp3",
+"good night": "https://files.catbox.moe/i29m4q.mp3",
+"Good night": "https://files.catbox.moe/i29m4q.mp3", 
+"গুড নাইট": "https://files.catbox.moe/i29m4q.mp3", 
+"Good morning": "https://files.catbox.moe/8gzqx5.mp3",
+"good morning": "https://files.catbox.moe/8gzqx5.mp3", 
+"গুড মর্নিং": "https://files.catbox.moe/8gzqx5.mp3", 
 };
 
 if (voiceMap[input]) {
