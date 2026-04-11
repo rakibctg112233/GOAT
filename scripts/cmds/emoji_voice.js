@@ -2,12 +2,16 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
-// 🔒 ONLY LOCKED EMOJI VALUE
-const THUMBS_UP_LOCK = Object.freeze([
+// 🔒 LOCKED AUDIO BLOCKS
+const LOCKED_THUMBS_UP = Object.freeze([
   "https://files.catbox.moe/f2qevj.mp3"
 ]);
 
-// 🔥 FULL EMOJI MAP (ONLY 👍 IS PROTECTED)
+const LOCKED_HEART_SMILE = Object.freeze([
+  "https://files.catbox.moe/zwl3z5.mp3"
+]);
+
+// 🔥 FULL EMOJI MAP (ONLY 👍 & 🥰 ARE PROTECTED)
 const emojiAudioMap = {
   "🥱": ["https://files.catbox.moe/9pou40.mp3"],
   "😁": ["https://files.catbox.moe/60cwcg.mp3"],
@@ -22,7 +26,7 @@ const emojiAudioMap = {
   "😐": ["https://files.catbox.moe/0uii99.mp3"],
   "🍼": ["https://files.catbox.moe/p6ht91.mp3"],
   "🤔": ["https://files.catbox.moe/hy6m6w.mp3"],
-  "🥰": ["https://files.catbox.moe/zwl3z5.mp3"],
+  "🥰": LOCKED_HEART_SMILE,   // 🔒 LOCKED
   "🤦": ["https://files.catbox.moe/ivlvoq.mp3"],
   "😘": ["https://files.catbox.moe/sbws0w.mp3"],
   "😙": ["https://files.catbox.moe/37dqpx.mp3"],
@@ -68,16 +72,20 @@ const emojiAudioMap = {
   "🤲": ["https://files.catbox.moe/l8qym7.mp3"],
   "🫶": ["https://files.catbox.moe/egturw.mp3"],
 
-  // 🔒 LOCKED EMOJI (CANNOT BE CHANGED)
-  "👍": THUMBS_UP_LOCK
+  "👍": LOCKED_THUMBS_UP // 🔒 LOCKED
 };
 
-// 🔥 CHECK 👍 INTEGRITY
-function checkThumbsUp() {
-  const val = emojiAudioMap["👍"];
+// 🔥 LOCK CHECK FUNCTION
+function checkIntegrity() {
+  if (
+    !emojiAudioMap["👍"] ||
+    emojiAudioMap["👍"][0] !== "https://files.catbox.moe/f2qevj.mp3"
+  ) return false;
 
-  if (!val) return false;
-  if (val[0] !== "https://files.catbox.moe/f2qevj.mp3") return false;
+  if (
+    !emojiAudioMap["🥰"] ||
+    emojiAudioMap["🥰"][0] !== "https://files.catbox.moe/zwl3z5.mp3"
+  ) return false;
 
   return true;
 }
@@ -90,26 +98,25 @@ module.exports = {
     countDown: 5,
     role: 0,
     shortDescription: "Emoji voice system",
-    longDescription: "One emoji triggers voice randomly",
+    longDescription: "One emoji triggers random voice",
     category: "system"
   },
 
   onStart: async function () {
     // 🔒 AUTHOR LOCK
     if (module.exports.config.author !== "FARHAN-KHAN") {
-      console.log("❌ AUTHOR MODIFIED");
+      console.log("❌ AUTHOR MODIFIED - STOPPED");
       process.exit(1);
     }
 
-    // 🔒 THUMBS UP PROTECTION
-    if (!checkThumbsUp()) {
-      console.log("❌ 👍 TAMPERED - BOT STOPPED");
+    // 🔒 EMOJI LOCK CHECK
+    if (!checkIntegrity()) {
+      console.log("❌ CRITICAL EMOJI TAMPER DETECTED (👍 / 🥰)");
       process.exit(1);
     }
   },
 
   onChat: async function ({ event, message }) {
-    // 🔒 runtime protection
     if (module.exports.config.author !== "FARHAN-KHAN") return;
 
     const { body } = event;
