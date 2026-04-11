@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "latti",
     version: "10.0",
-    author: "Farhan",
+    author: "FARHAN-KHAN",
     countDown: 3,
     role: 0,
     shortDescription: "latti mare 😈",
@@ -14,8 +14,19 @@ module.exports = {
 
   onStart: async function ({ api, event }) {
     try {
-      if (!event.messageReply)
-        return api.sendMessage("⚠-কাকে ফুটবল এর মতো কিক মারবি মেনশন দে..!", event.threadID, event.messageID);
+
+      // ⚠️ Safety author warning (non-destructive)
+      if (module.exports.config.author !== "FARHAN-KHAN") {
+        console.log("⚠️ Warning: Author name has been modified!");
+      }
+
+      if (!event.messageReply) {
+        return api.sendMessage(
+          "⚠-কাকে ফুটবল এর মতো কিক মারবি মেনশন দে..!",
+          event.threadID,
+          event.messageID
+        );
+      }
 
       const senderID = event.senderID;
       const targetID = event.messageReply.senderID;
@@ -37,7 +48,11 @@ module.exports = {
 
     } catch (err) {
       console.error(err);
-      return api.sendMessage("❌ Error hoise!", event.threadID, event.messageID);
+      return api.sendMessage(
+        "❌ Error hoise!",
+        event.threadID,
+        event.messageID
+      );
     }
   }
 };
